@@ -1,13 +1,14 @@
 import handcalcs
+from handcalcs.decorator import handcalc
 import forallpeople as us
 from plotly import graph_objects as go
 
 us.environment('us_customary')
-
+@handcalc()
 def prelim_width(Q_all:float,dead_load:float,live_load:float,snow_load:float,wind_load:float):
-    prelim_width = (dead_load*us.kip+live_load*us.kip+snow_load*us.kip+wind_load*us.kip)/(Q_all*(us.kip/1000/us.ft**2))
-    return round(prelim_width.sqrt()/us.ft*us.ft)
-
+    area_req = (dead_load*us.kip+live_load*us.kip+snow_load*us.kip+wind_load*us.kip)/(Q_all*(us.kip/1000/us.ft**2))
+    return round(area_req.sqrt()/us.ft*us.ft)
+@handcalc()
 def prelim_thick(col_dim:float):
     return (col_dim*us.inch*1.5)
 
@@ -68,24 +69,28 @@ def footing_geom(col_dim:float,foot_width,foot_thick):
 
     return fig
 
+#handcalc did not work here
+#@handcalc()
 def max_fact_load(dead_load,live_load,snow_load,wind_load):
-    return max(1.4*dead_load,
+    fact_load = max(1.4*dead_load,
                1.2*dead_load+1.6*live_load+0.5*snow_load,
                1.2*dead_load+1.6*snow_load+live_load,
                1.2*dead_load+1.6*snow_load+0.5*wind_load,
                1.2*dead_load+wind_load+live_load+0.5*snow_load,
                0.9*dead_load+wind_load)*us.kip
+     
+    return fact_load
 
 
-def two_way_shear(foot_width,foot_thick,col_dim,dead_load,live_load,snow_load,wind_load,f_c):
-    #Asuming #8 bars are used
-    """
-    Following ACI 3-18 TABLE 22.6.5.2
-    variations for edge and corner columns have not been implemented
-    """
+#Assuming #8 bars are used
+#Following ACI 3-18 TABLE 22.6.5.2
+#variations for edge and corner columns have not been implemented
+@handcalc(override='long')
+def two_way_shear(foot_width,foot_thick,col_dim,fact_load,f_c):
+
     d_avg = ((foot_thick-3-0.5)+(foot_thick-3-1.5))/2
     shear_trib_area = foot_width**2-(col_dim*us.inch+d_avg)**2
-    q_nu = max_fact_load(dead_load,live_load,snow_load,wind_load)/(foot_width**2)
+    q_nu = fact_load/(foot_width**2)
     Vu = q_nu*shear_trib_area
     Vu_stress = Vu/(4*(col_dim*us.inch+d_avg)*d_avg)
     lamda_s = min((2/(1+(d_avg/us.inch/10)))**0.5,1)
@@ -93,9 +98,7 @@ def two_way_shear(foot_width,foot_thick,col_dim,dead_load,live_load,snow_load,wi
     alpha_s = 40
     b_0 = 4*(col_dim*us.inch+d_avg)
 
-    vc = min(4*lamda_s*f_c**0.5,
-             (2+4/beta)*lamda_s*f_c**0.5,
-             (2+(alpha_s*d_avg/b_0)*lamda_s*f_c**0.5))*us.kip/us.inch**2/1000
+    vc = min(4*lamda_s*f_c**0.5,(2+4/beta)*lamda_s*f_c**0.5,(2+(alpha_s*d_avg/b_0)*lamda_s*f_c**0.5))*us.kip/us.inch**2/1000
 
 
 
@@ -103,5 +106,12 @@ def two_way_shear(foot_width,foot_thick,col_dim,dead_load,live_load,snow_load,wi
 
 
     return Vu_stress, vc
+
+
+@handcalc()
+def quadratic(a,b,c):
+    x_1 = (-b + (b**2 - 4*a*c)**0.5) / (2*a)
+    x_2 = (-b - (b**2 - 4*a*c)**0.5) / (2*a)
+    return x_1,x_2
 
 #THIS FUNCTION HAS NOT BEEN CHECKED YET
