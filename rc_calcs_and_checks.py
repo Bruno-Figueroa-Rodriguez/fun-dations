@@ -132,22 +132,81 @@ def flexure(q_nu,foot_width,col_dim):
 # a = As*f_y/(0.85*f_c*b)
 # phi_M_n = M_u = phi_M_n*As*f_y*(d_avg-a/2)
 # phi_M_n = M_u = phi_M_n*As*f_y*(d_avg-(As*f_y/0.85*f_c*b)/2)
+
 def flexure_reinf(f_c,f_y,M_u,foot_width,d_avg):
     Phi_flex = 0.9
     M_n = 0
-    A_s = 0
-    while abs((M_u-Phi_flex*M_n)/M_u)>0.005:
+    A_s = 0*us.inch**2
+    #A_s = A_s + 8.91*us.inch**2
+    #M_n = A_s*f_y*us.kip/1000/(us.inch**2)*(d_avg-((A_s*f_y)/(2*0.85*f_c*foot_width)))*us.ft/(12*us.inch)
+    
+
+
+    while ((Phi_flex*float(M_n))<float(M_u)):
         A_s = A_s + 0.01*us.inch**2
-        M_n = A_s*f_y*us.kip/1000/us.inch**2*(d_avg-((A_s*f_y*us.kip/1000/us.inch**2)/(2*0.85*f_c*us.kip/1000/us.inch**2*foot_width)))
+        M_n = A_s*f_y*us.kip/1000/(us.inch**2)*(d_avg-((A_s*f_y)/(2*0.85*f_c*foot_width)))*us.ft/(12*us.inch)
         
-        if A_s > 100:
+        if A_s > 100 :
             break
 
     return A_s,Phi_flex*M_n,M_u
 
+def rebar_amount(A_s):
+    rebars = {'#3':{'diam':0.375*us.inch,'area':0.11*us.inch**2},
+              '#4':{'diam':0.5*us.inch,'area':0.2*us.inch**2},
+              '#5':{'diam':0.625*us.inch,'area':0.31*us.inch**2},
+              '#6':{'diam':0.75*us.inch,'area':0.44*us.inch**2},
+              '#7':{'diam':0.875*us.inch,'area':0.6*us.inch**2},
+              '#8':{'diam':1*us.inch,'area':0.79*us.inch**2},
+              '#9':{'diam':1.128*us.inch,'area':1*us.inch**2},
+              '#10':{'diam':1.27*us.inch,'area':1.27*us.inch**2},
+              '#11':{'diam':1.41*us.inch,'area':1.56*us.inch**2}}
+    
+    min_rebar = []
+    for i in list(rebars.keys()):
+      min_rebar.append(int(float(A_s)/float(rebars[i]['area'])) + (float(A_s)%float(rebars[i]['area'])>0))
+
+    for j in range(len(list(rebars.keys()))):
+        rebars[list(rebars.keys())[j]].update({'num_bars':min_rebar[j]})
+
+    return rebars
+
+#@handcalc(override='long')
+def prelim_flex_reinf_calcs(A_s,f_c,f_y,M_u,foot_width,d_avg):
+    a = (A_s*f_y)/(0.85*f_c*foot_width)/us.inch*us.inch
+
+    if f_c <= 4000:
+        beta_1 = 0.85
+    elif f_c < 8000:
+        beta_1 = 0.85-(0.05*(f_c-4000))/1000
+    else:
+        beta_1 = 0.65
+
+    c = a/beta_1
+    epsilon_t = (0.003/c)*d_avg-0.003 
+
+    if float(epsilon_t) > 0.005:
+        Phi_flex_real = 0.9
+    elif float(epsilon_t) > 0.002:
+        Phi_flex_real = 0.65+(0.25*(epsilon_t-0.002)/(0.003))
+    else:
+        Phi_flex_real = 0.65
 
 
 
+    return a,Phi_flex_real,beta_1
+
+@handcalc(override='long')
+def flex_demo(rebars,reb_size,a,Phi_flex_real,f_y,d_avg,beta_1):
+    c = a/beta_1
+    epsilon_t = (0.003/c)*d_avg-0.003
+    Phi_flex_real = Phi_flex_real
+    real_A_s = rebars[reb_size]['area']*rebars[reb_size]['num_bars']
+    Phi_M_n = Phi_flex_real*real_A_s*f_y*us.kip/1000/(us.inch**2)*(d_avg-(a/2))*us.ft/(12*us.inch)
+    return Phi_M_n
+
+
+#NOT CHECKING FOR MIN REINFORCEMENT OR SPACING REQS
 #flexure not working yet, check units
 #flexure working, just check the moment and min reinforcement and tensile 0.003
 

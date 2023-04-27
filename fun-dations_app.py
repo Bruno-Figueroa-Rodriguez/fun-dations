@@ -20,6 +20,7 @@ with in_data:
     gamma_soil = st.number_input('Unit weight of Soil (lb/tf^3)')
     Q_all = st.number_input('Allowable soil pressure (psf)',value = 4000)
     f_c = st.number_input('Concrete Compressive strength (psi)',value = 4000)
+    reb_size = st.text_input('Rebar size for footing (i.e #8)',value='#8')
     gamma_conc = st.number_input('Concrete Unit weight (lb/tf^3)',value = 150)
     f_y = st.number_input('Steel Yield Strength (psi)',value = 60000)
 
@@ -70,13 +71,39 @@ else:
 latex_flex,M_u = rc.flexure(q_nu,foot_width,col_dim)
 
 st.latex(latex_flex)
-st.write(M_u/(us.ft)*12*us.inch)
-flex_reinf = rc.flexure_reinf(f_c,f_y,M_u,foot_width,d_avg)
+#st.latex(M_u)
+#st.write(float(M_u))
 
-st.latex(flex_reinf)
 
-st.write(10*us.ksi)
-st.write(10*us.kip/us.inch**2)
+A_s,Phi_flex_M_n,M_u = rc.flexure_reinf(f_c,f_y,M_u,foot_width,d_avg)
+
+#flex_reinf gives A_s,Phi_flex*M_n,M_u
+
+a,Phi_flex_real,beta_1 = rc.prelim_flex_reinf_calcs(A_s,f_c,f_y,M_u,foot_width,d_avg)
+
+
+rebars = rc.rebar_amount(A_s)
+
+st.write(rebars)
+
+latex_flex_demo,Phi_M_n = rc.flex_demo(rebars,reb_size,a,Phi_flex_real,f_y,d_avg,beta_1)
+
+
+st.latex(latex_flex_demo)
+
+if float(Phi_M_n) > float(M_u):
+    st.write('Flexure is OKAY, DCR = '+str(float(M_u)/float(Phi_M_n)))
+else:
+    st.write('Flexure failes, REVISE, DCR = '+str(float(M_u)/float(Phi_M_n)) )
+
+
+#st.latex(latex_flex_reinf_calcs)
+
+#st.latex('A_s,\:Phi_flex*M_n,\:M_u')
+#st.latex(flex_reinf)
+
+# st.write(10*us.ksi)
+# st.write(10*us.kip/us.inch**2)
 
 
 # a=1
