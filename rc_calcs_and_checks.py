@@ -88,30 +88,73 @@ def max_fact_load(dead_load,live_load,snow_load,wind_load):
 @handcalc(override='long')
 def two_way_shear(foot_width,foot_thick,col_dim,fact_load,f_c):
 
+    Phi_shear = 0.75
     d_avg = ((foot_thick-3-0.5)+(foot_thick-3-1.5))/2
     shear_trib_area = foot_width**2-(col_dim*us.inch+d_avg)**2
     q_nu = fact_load/(foot_width**2)
     Vu = q_nu*shear_trib_area
     Vu_stress = Vu/(4*(col_dim*us.inch+d_avg)*d_avg)
-    lamda_s = min((2/(1+(d_avg/us.inch/10)))**0.5,1)
+    lamb_s = min((2/(1+(d_avg/us.inch/10)))**0.5,1)
     beta = 1
     alpha_s = 40
     b_0 = 4*(col_dim*us.inch+d_avg)
 
-    vc = min(4*lamda_s*f_c**0.5,(2+4/beta)*lamda_s*f_c**0.5,(2+(alpha_s*d_avg/b_0)*lamda_s*f_c**0.5))*us.kip/us.inch**2/1000
+    vc = min(4*lamb_s*f_c**0.5,(2+4/beta)*lamb_s*f_c**0.5,(2+(alpha_s*d_avg/b_0)*lamb_s*f_c**0.5))*us.kip/us.inch**2/1000
+
+    return Vu_stress, vc, d_avg, q_nu,Phi_shear
+
+#onewayshear computed d_avg away from face of col
+#NO SHEAR REINFORCEMENT
+
+
+@handcalc(override='long')
+def one_way_shear(foot_width,f_c,d_avg,q_nu,col_dim):
+    Phi_shear = 0.75
+    foot_width = foot_width/us.ft*12*us.inch
+    V_c = 2*((f_c)**0.5)*us.kip/1000/us.inch**2*foot_width*d_avg
+    V_u = (q_nu/us.ksi*us.kip/us.inch**2)*foot_width*(foot_width/2-col_dim*us.inch/2-d_avg)
+
+    return Phi_shear,V_c,V_u
+
+
+#Bending computed at the face of the column
+#result is in kip-ft
+@handcalc(override='long')
+def flexure(q_nu,foot_width,col_dim):
+    M_u = q_nu*(((foot_width-col_dim*us.inch)/2)/us.inch*us.inch)**2*(foot_width)/2
+     
+
+    return M_u
+
+
+#Assuming phi_mn = 0.9 (will be verified later)
+# T = C, 0.85*f_c*b*a = As*f_y
+# a = As*f_y/(0.85*f_c*b)
+# phi_M_n = M_u = phi_M_n*As*f_y*(d_avg-a/2)
+# phi_M_n = M_u = phi_M_n*As*f_y*(d_avg-(As*f_y/0.85*f_c*b)/2)
+def flexure_reinf(f_c,f_y,M_u,foot_width,d_avg):
+    Phi_flex = 0.9
+    M_n = 0
+    A_s = 0
+    while abs((M_u-Phi_flex*M_n)/M_u)>0.005:
+        A_s = A_s + 0.01*us.inch**2
+        M_n = A_s*f_y*us.kip/1000/us.inch**2*(d_avg-((A_s*f_y*us.kip/1000/us.inch**2)/(2*0.85*f_c*us.kip/1000/us.inch**2*foot_width)))
+        
+        if A_s > 100:
+            break
+
+    return A_s,Phi_flex*M_n,M_u
 
 
 
-    
 
+#flexure not working yet, check units
+#flexure working, just check the moment and min reinforcement and tensile 0.003
 
-    return Vu_stress, vc
-
-
-@handcalc()
-def quadratic(a,b,c):
-    x_1 = (-b + (b**2 - 4*a*c)**0.5) / (2*a)
-    x_2 = (-b - (b**2 - 4*a*c)**0.5) / (2*a)
-    return x_1,x_2
+# @handcalc()
+# def quadratic(a,b,c):
+#     x_1 = (-b + (b**2 - 4*a*c)**0.5) / (2*a)
+#     x_2 = (-b - (b**2 - 4*a*c)**0.5) / (2*a)
+#     return x_1,x_2
 
 #THIS FUNCTION HAS NOT BEEN CHECKED YET
