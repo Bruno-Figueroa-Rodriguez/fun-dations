@@ -25,18 +25,25 @@ with in_data:
     f_y = st.number_input('Steel Yield Strength (psi)',value = 60000)
 
     #aspect_ratio = st.number_input('Footing aspect ratio')
+st.header('Dimensioning')
+
 latex_foot_width,foot_width = rc.prelim_width(Q_all,dead_load,live_load,snow_load,wind_load)
 latex_foot_thick,foot_thick = rc.prelim_thick(col_dim)
 st.latex(latex_foot_width)
-st.write(foot_width)
+st.write('footing width = ' + str(foot_width))
 st.latex(latex_foot_thick)
-st.write(foot_thick)
+st.write('footing thickness = ' +str(foot_thick))
 
 st.write(rc.footing_geom(col_dim,foot_width,foot_thick))
+
+st.header('Calculating loads')
 
 fact_load = rc.max_fact_load(dead_load,live_load,snow_load,wind_load)
 
 st.latex('Maximum\:Factored\:Load = ' + str(fact_load))
+
+st.header('Evaluating two-way shear')
+
 latex_twowayshear,twowayshear = rc.two_way_shear(foot_width,foot_thick,col_dim,fact_load,f_c)
 
 st.latex(latex_twowayshear)
@@ -55,18 +62,24 @@ if twowayshear[1]*twowayshear[4]>=twowayshear[0]:
 else:
     st.latex('Two\:way\:shear\:FAILS,\:revise\:design,\:DCR\:=\:'+str(round(twowayshear[0]/(twowayshear[1]*twowayshear[4]),3)) )
 
-st.latex(foot_width)
-st.latex(q_nu)
-latex_onewayshear,onewayshear = rc.one_way_shear(foot_width,f_c,d_avg,q_nu,col_dim)
+# st.latex(foot_width)
+# st.latex(q_nu)
 
-st.latex(onewayshear[0])
-st.latex(onewayshear[1])
-st.latex(onewayshear[2])
+
+st.header('Evaluating One-way shear')
+
+latex_onewayshear,onewayshear = rc.one_way_shear(foot_width,f_c,d_avg,q_nu,col_dim)
+st.latex(latex_onewayshear)
+# st.latex(onewayshear[0])
+# st.latex(onewayshear[1])
+# st.latex(onewayshear[2])
 
 if onewayshear[0]*onewayshear[1]>=onewayshear[2]:
     st.latex('One\:way\:shear\:is\:OK,\:DCR\:=\:'+str(round(onewayshear[2]/(onewayshear[0]*onewayshear[1]),3)))
 else:
     st.latex('One\:way\:shear\:FAILS,\:revise\:design ')
+
+st.header('Evaluating flexure')
 
 latex_flex,M_u = rc.flexure(q_nu,foot_width,col_dim)
 
@@ -84,7 +97,7 @@ a,Phi_flex_real,beta_1 = rc.prelim_flex_reinf_calcs(A_s,f_c,f_y,M_u,foot_width,d
 
 rebars = rc.rebar_amount(A_s)
 
-st.write(rebars)
+st.table(rebars)
 
 latex_flex_demo,Phi_M_n = rc.flex_demo(rebars,reb_size,a,Phi_flex_real,f_y,d_avg,beta_1)
 
