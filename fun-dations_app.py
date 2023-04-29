@@ -11,9 +11,9 @@ st.title('Reinforced Concrete Foundation Design (US UNITS)')
 in_data = st.sidebar
 
 with in_data:
-    dead_load = st.number_input('Dead Load (kip)',value = 240)
-    live_load = st.number_input('Live Load (kip)',value = 300)
-    snow_load = st.number_input('Snow Load (kip)')
+    dead_load = st.number_input('Dead Load (kip)',value = 240,min_value = 0)
+    live_load = st.number_input('Live Load (kip)',value = 300,min_value = 0)
+    snow_load = st.number_input('Snow Load (kip)',min_value = 0)
     wind_load = st.number_input('Wind Load (kip)')
     col_dim = st.number_input('Column width (inch)',value = 24)
     depth_footing = st.number_input('Depth of bottom of footing (ft)')
